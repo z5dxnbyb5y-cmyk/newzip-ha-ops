@@ -58,7 +58,6 @@
   .tag-emails  { color:#f0a040;background:#1e1205;border-color:#3e2808; }
   .tag-sms     { color:#b07ef0;background:#120a25;border-color:#280f4e; }
   .tag-routing { color:#e05090;background:#200a12;border-color:#430f24; }
-  .tag-sla     { color:#3dcc7e;background:#071510;border-color:#0e3020; }
   .issue-desc { font-size:14px;color:var(--text-muted);line-height:1.55;margin-bottom:10px;max-width:680px; }
   .workaround { font-size:13px;color:var(--text-dim);line-height:1.5;margin-bottom:10px;max-width:680px;padding:8px 12px;background:var(--surface);border-left:2px solid var(--border-light); }
   .workaround strong { color:var(--text-muted);font-weight:500; }
@@ -74,6 +73,7 @@
   .status-dot { width:6px;height:6px;border-radius:50%;background:currentColor;opacity:.8; }
   .empty-state { padding:60px 0;text-align:center;color:var(--text-dim);font-family:var(--mono);font-size:13px;display:none; }
   .empty-state.visible { display:block; }
+  .loading-state { padding:60px 0;text-align:center;color:var(--text-dim);font-family:var(--mono);font-size:13px; }
   .footer { border-top:1px solid var(--border);padding:16px 40px;font-family:var(--mono);font-size:11px;color:var(--text-dim);display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px; }
   .footer a { color:var(--text-dim);text-decoration:none; }
   .footer a:hover { color:var(--text-muted); }
@@ -92,7 +92,7 @@
   <div>
     <div class="wordmark">Newzip · Home Advisor Team</div>
     <div class="page-title">Workflow Issues & Fixes</div>
-    <div class="page-sub">Check here before flagging an issue. Fixes do not apply retroactively — use the date checker to see if your lead was affected.</div>
+    <div class="page-sub">Check here before flagging an issue. If your issue isn't listed, report it in <a href="https://newzip.slack.com/archives/C09FFH560A1" style="color:var(--blue);text-decoration:none;">#workflow_troubleshoot</a>.</div>
   </div>
   <div>
     <div class="meta-label">Resolved issues</div>
@@ -130,154 +130,136 @@
     <span>Resolved issues</span>
     <span class="section-count" id="list-count">—</span>
   </div>
+  <div class="loading-state" id="loading-state">Loading issues…</div>
   <div class="empty-state" id="empty-state">No matching issues found.</div>
 </div>
 
 <footer class="footer">
-  <span>Last updated: <span id="last-updated">—</span></span>
-  <span>Questions? <a href="https://newzip.slack.com/archives/C09FFH560A1">#workflow_troubleshoot</a> · Managed by Madelaine Davis</span>
+  <span>Last synced from Slack: <span id="last-updated">—</span></span>
+  <span>Questions? <a href="https://newzip.slack.com/archives/C09FFH560A1">#workflow_troubleshoot</a></span>
 </footer>
 
 <script>
-const ISSUES = [
-  {
-    id:"WF-006",
-    title:"Offer Accepted WF not re-triggering after deal stage is flipped (OA → Committed → OA)",
-    desc:"When a deal was set to Offer Accepted, reverted (e.g. deal fell out of contract), and then returned to Offer Accepted a second time, the TC workflow and closing info tasks did not re-trigger. Root cause: \"deal stage = Offer Accepted\" was missing from the workflow's re-enrollment criteria.",
-    workaround:"For deals where the stage was flipped and tasks never fired the second time, manually enroll into the TC/closing workflow: Edit → Manually Enroll Deal → Choose Individual Deals.",
-    tag:"tasks",
-    impactStart:"2025-09-16",
-    impactEnd:"2026-03-16",
-    fixedDate:"2026-03-16",
-    fixedBy:"Madelaine Davis",
-  },
-  {
-    id:"WF-005",
-    title:"LO change in Dash not reflected in automated workflow emails",
-    desc:"When a loan officer was updated on a deal in Dash, automated emails (agent intro, closing info requests, etc.) continued referencing the previous LO. The correct LO showed in Dash but the email templates weren't pulling the update.",
-    workaround:"For deals in this window where the LO changed, check whether key emails (agent intro, closing info) need to be resent manually with the correct LO information.",
-    tag:"emails",
-    impactStart:"2025-09-16",
-    impactEnd:"2026-03-13",
-    fixedDate:"2026-03-13",
-    fixedBy:"Luis Paris",
-  },
-  {
-    id:"WF-004",
-    title:"Post-referral and weekly check-in tasks continuing after deal marked Closed Lost or Transferred",
-    desc:"After marking a deal as Closed Lost (or Transferred), the post-referral workflow continued generating check-in tasks for HAs and TCs. Root cause: workflow exit filters were not catching all terminal deal statuses.",
-    workaround:"Tasks received for Closed Lost or Transferred deals during this window can be safely dismissed. They are artifacts of the impact period, not an active issue.",
-    tag:"tasks",
-    impactStart:"2026-02-26",
-    impactEnd:"2026-03-09",
-    fixedDate:"2026-03-09",
-    fixedBy:"Madelaine Davis",
-  },
-  {
-    id:"WF-003",
-    title:"Duplicate tasks and emails across multiple workflows (Sale Pending, Post-Referral, Pre-Referral)",
-    desc:"HAs and TCs started receiving duplicate tasks across Sale Pending, Post-Referral, and Pre-Referral workflows. In some cases, duplicate emails also fired back-to-back. Two root causes: (1) a filter bug in Loan Simple workflows, and (2) Newrez deals enrolling in both cashback=yes and cashback=no Sale Pending workflows simultaneously when a deal's cashback status was changed (e.g. marked Not Attached).",
-    workaround:"Duplicate tasks from this window can be dismissed. Duplicate emails that already sent cannot be recalled. If you see duplicates on deals created after Feb 17, report it — that would be a new issue.",
-    tag:"tasks",
-    impactStart:"2026-02-04",
-    impactEnd:"2026-02-17",
-    fixedDate:"2026-02-17",
-    fixedBy:"Madelaine Davis",
-  },
-  {
-    id:"WF-002",
-    title:"Leads created before 1/14/26 routing through legacy workflow",
-    desc:"As part of migrating to updated workflows, a date cutoff of 1/14/26 was used: leads created before that date remained in the old workflow to avoid disrupting in-progress enrollments; leads after went to the new one. Occasionally caused confusion when older leads behaved differently. This was intentional design, not a bug.",
-    workaround:"If a lead created before Jan 14, 2026 appears to be on an older workflow, that is expected. Do not re-enroll unless there is a specific problem. The old workflow will complete naturally.",
-    tag:"routing",
-    impactStart:"2025-09-16",
-    impactEnd:"2026-01-14",
-    fixedDate:"2026-01-14",
-    fixedBy:"Madelaine Davis",
-  },
-  {
-    id:"WF-001",
-    title:"LiveEasy/MoveEasy SMS sending \"Congrats on your new home\" to sell-side (listing) leads",
-    desc:"Sell-side leads under the Newrez LiveEasy/MoveEasy program were receiving an SMS meant for buyers who completed a purchase — even though the borrower only had a listing under contract. All LiveEasy/MoveEasy SMS has since been turned off.",
-    workaround:"If a sell-side lead received this message during the window and brings it up, acknowledge the error and clarify their experience. No further action needed — the SMS is fully disabled.",
-    tag:"sms",
-    impactStart:"2025-09-16",
-    impactEnd:"2025-10-17",
-    fixedDate:"2025-10-17",
-    fixedBy:"Madelaine Davis",
-  },
-];
+let ALL_ISSUES = [];
+let activeTag = 'all', searchVal = '', checkDateVal = '';
 
-function fmtDate(d){const[y,m,day]=d.split('-');const mo=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];return `${mo[parseInt(m,10)-1]} ${parseInt(day,10)}, ${y}`}
-function parseDate(s){const[y,m,d]=s.split('-').map(Number);return new Date(y,m-1,d)}
-function dateInRange(d,s,e){const dt=parseDate(d),st=parseDate(s),en=parseDate(e);return dt>=st&&dt<=en}
+function fmtDate(d) {
+  if (!d) return '—';
+  const [y, m, day] = d.split('-');
+  const mo = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  return `${mo[parseInt(m,10)-1]} ${parseInt(day,10)}, ${y}`;
+}
+function fmtDatetime(iso) {
+  if (!iso) return '—';
+  const d = new Date(iso);
+  return d.toLocaleDateString('en-US', { month:'short', day:'numeric', year:'numeric', hour:'numeric', minute:'2-digit', timeZoneName:'short' });
+}
+function parseDate(s) { const [y,m,d]=s.split('-').map(Number); return new Date(y,m-1,d); }
+function dateInRange(d,s,e) { const dt=parseDate(d),st=parseDate(s),en=parseDate(e); return dt>=st&&dt<=en; }
 
-let activeTag='all',searchVal='',checkDateVal='';
-
-function buildRow(issue){
-  const hl=checkDateVal&&dateInRange(checkDateVal,issue.impactStart,issue.impactEnd);
-  const row=document.createElement('div');
-  row.className='issue-row'+(hl?' highlighted':'');
-  row.innerHTML=`
+function buildRow(issue) {
+  const hl = checkDateVal && dateInRange(checkDateVal, issue.impactStart, issue.impactEnd);
+  const row = document.createElement('div');
+  row.className = 'issue-row' + (hl ? ' highlighted' : '');
+  row.innerHTML = `
     <div class="issue-main">
       <div class="issue-top">
         <span class="issue-title">${issue.title}</span>
         <span class="tag tag-${issue.tag}">${issue.tag}</span>
         <span style="font-family:var(--mono);font-size:11px;color:var(--text-dim)">${issue.id}</span>
-        ${hl?'<span style="font-family:var(--mono);font-size:10px;color:var(--amber);background:#1e1205;border:1px solid #3e2808;padding:2px 8px;border-radius:4px;text-transform:uppercase;letter-spacing:.06em">Your date falls in this window</span>':''}
+        ${hl ? '<span style="font-family:var(--mono);font-size:10px;color:var(--amber);background:#1e1205;border:1px solid #3e2808;padding:2px 8px;border-radius:4px;text-transform:uppercase;letter-spacing:.06em">Your date falls in this window</span>' : ''}
       </div>
       <div class="issue-desc">${issue.desc}</div>
-      ${issue.workaround?`<div class="workaround"><strong>For affected leads:</strong> ${issue.workaround}</div>`:''}
+      ${issue.workaround ? `<div class="workaround"><strong>For affected leads:</strong> ${issue.workaround}</div>` : ''}
       <div class="issue-dates">
         <div class="date-pill"><span class="date-pill-label">Impact window</span><span class="date-pill-value impact">${fmtDate(issue.impactStart)} — ${fmtDate(issue.impactEnd)}</span></div>
         <div class="date-pill"><span class="date-pill-label">Fixed</span><span class="date-pill-value fixed">${fmtDate(issue.fixedDate)}</span></div>
-        <div class="date-pill"><span class="date-pill-label">By</span><span class="date-pill-value">${issue.fixedBy}</span></div>
+        <div class="date-pill"><span class="date-pill-label">By</span><span class="date-pill-value">${issue.fixedBy || '—'}</span></div>
       </div>
     </div>
     <div class="issue-right"><span class="status-badge status-fixed"><span class="status-dot"></span>Fixed</span></div>`;
   return row;
 }
 
-function renderIssues(){
-  const container=document.getElementById('issue-list');
-  container.querySelectorAll('.issue-row').forEach(el=>el.remove());
-  const filtered=ISSUES.filter(i=>{
-    const matchTag=activeTag==='all'||i.tag===activeTag;
-    const q=searchVal.toLowerCase();
-    return matchTag&&(!q||i.title.toLowerCase().includes(q)||i.desc.toLowerCase().includes(q)||i.id.toLowerCase().includes(q));
+function renderIssues() {
+  const container = document.getElementById('issue-list');
+  container.querySelectorAll('.issue-row').forEach(el => el.remove());
+
+  const filtered = ALL_ISSUES.filter(i => {
+    const matchTag    = activeTag === 'all' || i.tag === activeTag;
+    const q           = searchVal.toLowerCase();
+    const matchSearch = !q || i.title.toLowerCase().includes(q) || i.desc.toLowerCase().includes(q) || i.id.toLowerCase().includes(q);
+    return matchTag && matchSearch;
   });
-  document.getElementById('list-count').textContent=filtered.length;
-  document.getElementById('total-count').textContent=ISSUES.length;
-  filtered.forEach(issue=>container.appendChild(buildRow(issue)));
-  const empty=document.getElementById('empty-state');
-  filtered.length===0?empty.classList.add('visible'):empty.classList.remove('visible');
+
+  document.getElementById('list-count').textContent  = filtered.length;
+  document.getElementById('total-count').textContent = ALL_ISSUES.length;
+  filtered.forEach(issue => container.appendChild(buildRow(issue)));
+
+  const empty = document.getElementById('empty-state');
+  filtered.length === 0 ? empty.classList.add('visible') : empty.classList.remove('visible');
 }
 
-document.getElementById('search').addEventListener('input',e=>{searchVal=e.target.value;renderIssues()});
-document.getElementById('filters').addEventListener('click',e=>{
-  const b=e.target.closest('.filter-btn');if(!b)return;
-  document.querySelectorAll('.filter-btn').forEach(x=>x.classList.remove('active'));
-  b.classList.add('active');activeTag=b.dataset.tag;renderIssues();
-});
-document.getElementById('check-date').addEventListener('change',e=>{
-  checkDateVal=e.target.value;
-  const clearBtn=document.getElementById('checker-clear'),out=document.getElementById('checker-output');
-  if(!checkDateVal){out.textContent='Enter a lead date to check against known impact windows.';out.className='checker-result';clearBtn.style.display='none';renderIssues();return}
-  const hits=ISSUES.filter(i=>dateInRange(checkDateVal,i.impactStart,i.impactEnd));
-  clearBtn.style.display='inline-block';
-  if(hits.length===0){out.textContent=`No known issues affected leads on ${fmtDate(checkDateVal)}.`;out.className='checker-result clear'}
-  else{out.textContent=`${hits.length} issue${hits.length>1?'s':''} may have affected leads on ${fmtDate(checkDateVal)} — highlighted below.`;out.className='checker-result hit'}
+async function loadIssues() {
+  try {
+    const res  = await fetch('issues.json?t=' + Date.now());
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json();
+
+    ALL_ISSUES = (data.issues || []).slice().reverse(); // newest first
+    document.getElementById('last-updated').textContent = fmtDatetime(data.lastUpdated);
+    document.getElementById('loading-state').style.display = 'none';
+    renderIssues();
+  } catch (e) {
+    document.getElementById('loading-state').textContent = 'Could not load issues. Try refreshing.';
+    console.error('Failed to load issues.json:', e);
+  }
+}
+
+document.getElementById('search').addEventListener('input', e => { searchVal = e.target.value; renderIssues(); });
+
+document.getElementById('filters').addEventListener('click', e => {
+  const b = e.target.closest('.filter-btn');
+  if (!b) return;
+  document.querySelectorAll('.filter-btn').forEach(x => x.classList.remove('active'));
+  b.classList.add('active');
+  activeTag = b.dataset.tag;
   renderIssues();
 });
-document.getElementById('checker-clear').addEventListener('click',()=>{
-  checkDateVal='';document.getElementById('check-date').value='';
-  document.getElementById('checker-output').textContent='Enter a lead date to check against known impact windows.';
-  document.getElementById('checker-output').className='checker-result';
-  document.getElementById('checker-clear').style.display='none';renderIssues();
+
+document.getElementById('check-date').addEventListener('change', e => {
+  checkDateVal = e.target.value;
+  const clearBtn = document.getElementById('checker-clear');
+  const out = document.getElementById('checker-output');
+  if (!checkDateVal) {
+    out.textContent = 'Enter a lead date to check against known impact windows.';
+    out.className = 'checker-result';
+    clearBtn.style.display = 'none';
+    renderIssues();
+    return;
+  }
+  const hits = ALL_ISSUES.filter(i => dateInRange(checkDateVal, i.impactStart, i.impactEnd));
+  clearBtn.style.display = 'inline-block';
+  if (hits.length === 0) {
+    out.textContent = `No known issues affected leads on ${fmtDate(checkDateVal)}.`;
+    out.className = 'checker-result clear';
+  } else {
+    out.textContent = `${hits.length} issue${hits.length > 1 ? 's' : ''} may have affected leads on ${fmtDate(checkDateVal)} — highlighted below.`;
+    out.className = 'checker-result hit';
+  }
+  renderIssues();
 });
 
-document.getElementById('last-updated').textContent=fmtDate(ISSUES[0].fixedDate);
-renderIssues();
+document.getElementById('checker-clear').addEventListener('click', () => {
+  checkDateVal = '';
+  document.getElementById('check-date').value = '';
+  document.getElementById('checker-output').textContent = 'Enter a lead date to check against known impact windows.';
+  document.getElementById('checker-output').className = 'checker-result';
+  document.getElementById('checker-clear').style.display = 'none';
+  renderIssues();
+});
+
+loadIssues();
 </script>
 </body>
 </html>
