@@ -1,0 +1,71 @@
+{
+  "lastUpdated": "2026-04-13T00:00:00.000Z",
+  "issues": [
+    {
+      "id": "WF-001",
+      "title": "LiveEasy/MoveEasy SMS sending 'Congrats on your new home' to sell-side (listing) leads",
+      "desc": "Sell-side leads under the Newrez LiveEasy/MoveEasy program were receiving an SMS meant for buyers who completed a purchase, even though the borrower only had a listing under contract. All LiveEasy/MoveEasy SMS has since been turned off.",
+      "workaround": "If a sell-side lead received this message and brings it up, acknowledge the error and clarify their experience. No further action needed — the SMS is fully disabled.",
+      "tag": "sms",
+      "impactStart": "2025-09-16",
+      "impactEnd": "2025-10-17",
+      "fixedDate": "2025-10-17",
+      "fixedBy": "Madelaine Davis"
+    },
+    {
+      "id": "WF-002",
+      "title": "Leads created before 1/14/26 routing through legacy workflow",
+      "desc": "As part of migrating to updated workflows, a date cutoff of 1/14/26 was used: leads created before that date remained in the old workflow to avoid disrupting in-progress enrollments; leads after went to the new one. Occasionally caused confusion when older leads behaved differently. This was intentional design, not a bug.",
+      "workaround": "If a lead created before Jan 14, 2026 appears to be on an older workflow, that is expected. Do not re-enroll unless there is a specific problem.",
+      "tag": "routing",
+      "impactStart": "2025-09-16",
+      "impactEnd": "2026-01-14",
+      "fixedDate": "2026-01-14",
+      "fixedBy": "Madelaine Davis"
+    },
+    {
+      "id": "WF-003",
+      "title": "Duplicate tasks and emails across multiple workflows (Sale Pending, Post-Referral, Pre-Referral)",
+      "desc": "HAs and TCs started receiving duplicate tasks across Sale Pending, Post-Referral, and Pre-Referral workflows. Two root causes: a filter bug in Loan Simple workflows, and Newrez deals enrolling in both cashback=yes and cashback=no Sale Pending workflows simultaneously when a deal's cashback status changed.",
+      "workaround": "Duplicate tasks from this window can be dismissed. Duplicate emails already sent cannot be recalled. If you see duplicates on deals created after Feb 17, report it.",
+      "tag": "tasks",
+      "impactStart": "2026-02-04",
+      "impactEnd": "2026-02-17",
+      "fixedDate": "2026-02-17",
+      "fixedBy": "Madelaine Davis"
+    },
+    {
+      "id": "WF-004",
+      "title": "Post-referral and weekly check-in tasks continuing after deal marked Closed Lost or Transferred",
+      "desc": "After marking a deal as Closed Lost or Transferred, the post-referral workflow continued generating check-in tasks. Root cause: workflow exit filters were not catching all terminal deal statuses.",
+      "workaround": "Tasks received for Closed Lost or Transferred deals during this window can be safely dismissed.",
+      "tag": "tasks",
+      "impactStart": "2026-02-26",
+      "impactEnd": "2026-03-09",
+      "fixedDate": "2026-03-09",
+      "fixedBy": "Madelaine Davis"
+    },
+    {
+      "id": "WF-005",
+      "title": "LO change in Dash not reflected in automated workflow emails",
+      "desc": "When a loan officer was updated on a deal in Dash, automated emails continued referencing the previous LO. The correct LO showed in Dash but the email templates were not pulling the update.",
+      "workaround": "For deals in this window where the LO changed, check whether key emails (agent intro, closing info) need to be resent manually with the correct LO information.",
+      "tag": "emails",
+      "impactStart": "2025-09-16",
+      "impactEnd": "2026-03-13",
+      "fixedDate": "2026-03-13",
+      "fixedBy": "Luis Paris"
+    },
+    {
+      "id": "WF-006",
+      "title": "Offer Accepted WF not re-triggering after deal stage is flipped (OA to Committed back to OA)",
+      "desc": "When a deal was set to Offer Accepted, reverted (e.g. deal fell out of contract), and then returned to Offer Accepted a second time, the TC workflow and closing info tasks did not re-trigger. Root cause: 'deal stage = Offer Accepted' was missing from the workflow's re-enrollment criteria.",
+      "workaround": "For deals where the stage was flipped and tasks never fired the second time, manually enroll into the TC/closing workflow: Edit > Manually Enroll Deal > Choose Individual Deals.",
+      "tag": "tasks",
+      "impactStart": "2025-09-16",
+      "impactEnd": "2026-03-16",
+      "fixedDate": "2026-03-16",
+      "fixedBy": "Madelaine Davis"
+    }
+  ]
+}
