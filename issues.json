@@ -1,11 +1,11 @@
 {
-  "lastUpdated": "2026-04-16T20:11:38.889Z",
+  "lastUpdated": "2026-04-17T06:24:47.430Z",
   "issues": [
     {
       "id": "WF-001",
-      "title": "Loan Simple leads receiving double tasks in post-referral workflow",
-      "desc": "Loan Simple leads were generating duplicate tasks across the post-referral and other workflows. The issue was traced to a bugged filter related to Loan Simple lead associations in HubSpot. Madelaine worked with HubSpot support and confirmed the issue was resolved.",
-      "workaround": "Review any LS leads that received duplicate tasks during the impact window and manually close or delete the extra duplicate tasks.",
+      "title": "Loan Simple leads receiving duplicate tasks in post-referral and pre-referral workflows",
+      "desc": "Loan Simple leads were generating double tasks across post-referral and pre-referral workflows. The issue was traced to a bugged filter related to Loan Simple lead associations in HubSpot. HubSpot support was engaged and confirmed the fix.",
+      "workaround": "Review any LS leads that received duplicate tasks during the impact window and manually close or delete the duplicate tasks on affected deal records.",
       "tag": "tasks",
       "impactStart": "2026-02-05",
       "impactEnd": "2026-02-05",
@@ -14,9 +14,20 @@
     },
     {
       "id": "WF-002",
-      "title": "Automated emails showing previous loan officer after LO change",
-      "desc": "When a loan officer was changed on a deal, automated emails continued to reference the old LO rather than the newly assigned one. The issue was identified on a deal where LO Paul remained in outgoing emails instead of the updated LO Julie Yocum. Luis resolved the issue.",
-      "workaround": "For deals where the LO was changed during the impact window, manually resend any automated agent-facing emails with the correct LO information.",
+      "title": "Automated SMS messages not sending for pre-referral leads",
+      "desc": "Automated SMS messages stopped going out for multiple leads across MRC and lender lead types, with the last confirmed SMS observed around January 30, 2026. The issue was suspected to be an integration problem between HubSpot and the backend or RingCentral. A product ticket was created to investigate.",
+      "workaround": "Manually send any missed SMS outreach to leads who entered the pre-referral workflow between approximately January 30 and February 11, 2026.",
+      "tag": "sms",
+      "impactStart": "2026-01-30",
+      "impactEnd": "2026-02-11",
+      "fixedDate": "2026-02-11",
+      "fixedBy": "Madelaine Davis"
+    },
+    {
+      "id": "WF-003",
+      "title": "Automated emails showing incorrect loan officer after LO change",
+      "desc": "When a loan officer was updated on a deal, automated emails continued to display the previous LO's information instead of the newly assigned one. The affected deal was showing the old LO (Paul) instead of the updated LO (Julie Yocum). The issue was resolved by Luis.",
+      "workaround": "For any leads where an LO change occurred during the impact window, manually resend the agent introduction email with the correct LO information.",
       "tag": "emails",
       "impactStart": "2026-03-13",
       "impactEnd": "2026-03-13",
@@ -24,10 +35,10 @@
       "fixedBy": "Luis"
     },
     {
-      "id": "WF-003",
-      "title": "Post-referral workflow tasks not stopping for closed lost and transferred deals",
-      "desc": "Deals marked as closed lost or transferred continued to receive post-referral workflow check-in tasks instead of being unenrolled. The workflow lacked proper suppression filters for these terminal deal stages. Madelaine made a tweak to the filters to resolve it.",
-      "workaround": "Manually dismiss or delete any check-in tasks that were incorrectly generated for deals marked closed lost or transferred during the impact window.",
+      "id": "WF-004",
+      "title": "Post-referral workflow tasks not stopping when deal marked Closed Lost or Transferred",
+      "desc": "The post-referral workflow continued generating check-in tasks for deals that had been marked as Closed Lost or Transferred, meaning HAs and TCs were receiving tasks for deals that should have been inactive. A filter tweak was applied to the workflow to suppress tasks for these deal stages.",
+      "workaround": "Manually dismiss any lingering check-in tasks on deals marked Closed Lost or Transferred during the impact window.",
       "tag": "tasks",
       "impactStart": "2026-03-02",
       "impactEnd": "2026-03-09",
@@ -35,10 +46,10 @@
       "fixedBy": "Madelaine Davis"
     },
     {
-      "id": "WF-004",
-      "title": "Offer Accepted workflow not re-triggering after deal stage is flipped back and forth",
-      "desc": "When a deal was marked Offer Accepted, reverted to a prior stage, and then moved back to Offer Accepted, the TC workflow tasks did not re-trigger on the second transition. The root cause was that 'deal stage = offer accepted' was not listed as a re-enrollment criterion. Madelaine updated the workflow to include it as a re-enrollment trigger.",
-      "workaround": "For any deals that went through a second Offer Accepted transition during the impact window and did not receive TC tasks, manually enroll the deal into the TC workflow.",
+      "id": "WF-005",
+      "title": "Offer Accepted workflow not re-triggering when deal stage toggled back to Offer Accepted",
+      "desc": "When a deal was set to Offer Accepted, then reverted to Referred Active or Committed (e.g., due to a fallen contract), and then moved back to Offer Accepted, the workflow tasks did not re-trigger for the TC. The root cause was that 'deal stage = offer accepted' was not listed as a re-enrollment criterion in the workflow. This was updated to allow re-enrollment.",
+      "workaround": "Manually enroll any deals that were toggled back to Offer Accepted between March 16 and the fix date to ensure TCs receive the correct closing tasks.",
       "tag": "tasks",
       "impactStart": "2026-03-16",
       "impactEnd": "2026-03-16",
@@ -46,10 +57,10 @@
       "fixedBy": "Madelaine Davis"
     },
     {
-      "id": "WF-005",
-      "title": "MRC deals updated to Offer Accepted not enrolling TCs into workflow",
-      "desc": "MRC deals being updated to Offer Accepted were not triggering the TC workflow or associated tasks. Madelaine engaged HubSpot support and confirmed the issue was resolved after speaking with them. The root cause was not explicitly stated.",
-      "workaround": "For MRC deals moved to Offer Accepted during the impact window that did not receive TC tasks, manually enroll them into the TC workflow.",
+      "id": "WF-006",
+      "title": "MRC deals marked Offer Accepted not enrolling TCs into workflow",
+      "desc": "MRC leads updated to Offer Accepted were not triggering the TC workflow, meaning TCs were not receiving tasks to collect closing information. The issue was investigated with HubSpot support and a fix was confirmed. Leads without an assigned loan officer were particularly affected as MRC deals typically never have an LO assigned.",
+      "workaround": "Manually enroll any MRC deals updated to Offer Accepted between approximately March 14 and April 1, 2026 and send closing info collection emails manually in the interim.",
       "tag": "tasks",
       "impactStart": "2026-03-14",
       "impactEnd": "2026-04-01",
