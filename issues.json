@@ -1,11 +1,11 @@
 {
-  "lastUpdated": "2026-04-30T03:27:11.515Z",
+  "lastUpdated": "2026-04-30T08:25:27.728Z",
   "issues": [
     {
       "id": "WF-001",
-      "title": "Loan Simple leads receiving double tasks in post-referral and pre-referral workflows",
-      "desc": "HAs and TCs were receiving duplicate tasks for Loan Simple leads across multiple workflows including pre-referral and post-referral. The issue was traced to a bugged filter related to Loan Simple lead associations in HubSpot. HubSpot support was engaged and confirmed the fix.",
-      "workaround": "Review any LS leads that received duplicate tasks during the impact window and manually dismiss or reconcile the extra duplicate tasks.",
+      "title": "Duplicate tasks generated for Loan Simple leads in post-referral workflow",
+      "desc": "HAs and TCs were receiving double tasks for Loan Simple leads in the post-referral workflow. The root cause was identified as a weird glitch related to HubSpot's handling of associations and filters for LS leads. HubSpot support was engaged and the issue was resolved.",
+      "workaround": "Review any LS leads that received duplicate tasks during the impact window and manually close out the duplicate tasks.",
       "tag": "tasks",
       "impactStart": "2026-02-05",
       "impactEnd": "2026-02-05",
@@ -15,8 +15,8 @@
     {
       "id": "WF-002",
       "title": "Post-referral workflow tasks not stopping when deal marked Closed Lost or Transferred",
-      "desc": "HAs continued to receive post-referral workflow check-in tasks even after deals were marked as Closed Lost or Transferred. The workflow filters were not properly excluding these terminal deal stages. Madelaine tweaked the filters on March 9 to resolve the issue.",
-      "workaround": "Manually dismiss any lingering check-in tasks on deals already marked Closed Lost or Transferred during the impact window.",
+      "desc": "HAs continued to receive post-referral workflow check-in tasks for deals that had been marked as Closed Lost or Transferred. The workflow filters did not include these deal stages as unenrollment or suppression criteria. Madelaine made a tweak to the filters on 2026-03-09 to resolve the issue.",
+      "workaround": "Manually cancel any open workflow tasks on deals that were marked Closed Lost or Transferred during the impact window.",
       "tag": "tasks",
       "impactStart": "2026-03-02",
       "impactEnd": "2026-03-09",
@@ -25,9 +25,9 @@
     },
     {
       "id": "WF-003",
-      "title": "LO change not reflected in automated agent emails — old LO still shown",
-      "desc": "When a loan officer was updated on a deal, the automated emails to the agent continued to display the previous LO's information instead of the new one. The affected deal showed Paul instead of the updated LO Julie Yocum. Luis investigated and resolved the issue on the same day it was reported.",
-      "workaround": "For deals where an LO change occurred during the impact window, manually verify and resend the agent introduction email with the correct LO information.",
+      "title": "LO change not reflected in automated agent emails — previous LO details persisted",
+      "desc": "When a loan officer was changed on a deal, automated emails sent to the agent still showed the previous LO's information instead of the updated one. The fix was handled on the product/backend side. Luis resolved the issue on 2026-03-13.",
+      "workaround": "For any deals where an LO change occurred during the impact window, manually send a corrected email to the agent with the updated LO information.",
       "tag": "emails",
       "impactStart": "2026-03-13",
       "impactEnd": "2026-03-13",
@@ -36,9 +36,9 @@
     },
     {
       "id": "WF-004",
-      "title": "Offer Accepted workflow not re-enrolling deals that previously exited and returned to Offer Accepted",
-      "desc": "When a deal was set to Offer Accepted, then reverted to a prior stage, and then set back to Offer Accepted, the TC workflow tasks did not re-trigger on the second transition. The root cause was that 'deal stage = Offer Accepted' was missing from the re-enrollment criteria. Madelaine updated the re-enrollment criteria to include this trigger.",
-      "workaround": "Manually enroll any deals that were flipped back to Offer Accepted a second time during the impact window to ensure TCs receive their tasks.",
+      "title": "TC workflow tasks not triggering on Offer Accepted when deal stage had previously been toggled back and forth",
+      "desc": "When a deal was set to Offer Accepted, reverted to a prior stage, and then set back to Offer Accepted, the TC workflow did not re-trigger because re-enrollment criteria did not include the Offer Accepted deal stage. Madelaine identified that 'deal stage offer accepted' was missing from the re-enrollment criteria and updated the workflow on 2026-03-16.",
+      "workaround": "Manually enroll any deals that were flipped back to Offer Accepted during the impact window and did not receive TC tasks.",
       "tag": "tasks",
       "impactStart": "2026-03-16",
       "impactEnd": "2026-03-16",
@@ -47,11 +47,11 @@
     },
     {
       "id": "WF-005",
-      "title": "MRC deals marked Offer Accepted not enrolling TCs into workflow tasks",
-      "desc": "MRC deals updated to Offer Accepted were not triggering the TC workflow, leaving TCs without tasks to manage the closing process. HAs were sending required emails manually as a result. Madelaine spoke with HubSpot support and confirmed the issue was fixed on April 1.",
-      "workaround": "Manually enroll any MRC deals that were moved to Offer Accepted between approximately March 14 and April 1 to ensure TCs receive the appropriate closing tasks.",
+      "title": "MRC deals updated to Offer Accepted not enrolling TCs into workflow tasks",
+      "desc": "MRC deals marked as Offer Accepted were not triggering the TC workflow, meaning TCs were not receiving their tasks for these deals. HubSpot support was contacted and the issue was confirmed fixed on 2026-04-01. The root cause was not explicitly stated.",
+      "workaround": "Manually enroll any MRC deals updated to Offer Accepted between approximately 2026-02-04 and 2026-04-01 that did not generate TC tasks, and send closing info collection emails manually.",
       "tag": "tasks",
-      "impactStart": "2026-03-14",
+      "impactStart": "2026-02-04",
       "impactEnd": "2026-04-01",
       "fixedDate": "2026-04-01",
       "fixedBy": "Madelaine Davis"
