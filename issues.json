@@ -1,11 +1,11 @@
 {
-  "lastUpdated": "2026-04-30T19:26:35.241Z",
+  "lastUpdated": "2026-05-01T03:37:07.329Z",
   "issues": [
     {
       "id": "WF-001",
-      "title": "Loan Simple leads receiving duplicate tasks in post-referral and pre-referral workflows",
-      "desc": "Loan Simple leads were being enrolled in duplicate workflow branches, causing HAs and TCs to receive double tasks across multiple workflows including post-referral and pre-referral. The root cause was a bugged filter related to Loan Simple lead associations in HubSpot. Issue was resolved after working with HubSpot support.",
-      "workaround": "Review any LS leads that received duplicate tasks during the impact window and manually close or dismiss the duplicate tasks to avoid double-processing.",
+      "title": "Double tasks generated for Loan Simple leads in post-referral workflow",
+      "desc": "Loan Simple leads were receiving duplicate tasks in the post-referral workflow. The issue was caused by a bugged filter related to Loan Simple lead associations in HubSpot. Madelaine worked with HubSpot support to resolve the glitch.",
+      "workaround": "Review any LS leads that received duplicate tasks during the impact window and manually close or dismiss the duplicate tasks.",
       "tag": "tasks",
       "impactStart": "2026-02-05",
       "impactEnd": "2026-02-05",
@@ -14,31 +14,9 @@
     },
     {
       "id": "WF-002",
-      "title": "Offer Accepted workflow not re-triggering when deal stage flipped back and forth",
-      "desc": "When a deal was moved to Offer Accepted, then reverted to a prior stage, and then moved back to Offer Accepted, the workflow tasks did not re-trigger. This affected HAs and TCs who manage deals that fall out of contract and go back under contract. The root cause was that 'deal stage = Offer Accepted' was not listed as a re-enrollment criterion in the workflow.",
-      "workaround": "Manually enroll any deals that were moved to Offer Accepted a second time during the impact window and did not receive TC tasks.",
-      "tag": "tasks",
-      "impactStart": "2026-03-16",
-      "impactEnd": "2026-03-16",
-      "fixedDate": "2026-03-16",
-      "fixedBy": "Madelaine Davis"
-    },
-    {
-      "id": "WF-003",
-      "title": "Post-referral workflow tasks continuing after deal marked Closed Lost or Transferred",
-      "desc": "HAs were receiving post-referral workflow check-in tasks even after deals were marked as Closed Lost or Transferred. This caused confusion and unnecessary follow-up on dead deals. A tweak was made to the workflow filters to suppress tasks for these deal stages.",
-      "workaround": "Manually dismiss any post-referral tasks that were generated for deals already marked Closed Lost or Transferred during the impact window.",
-      "tag": "tasks",
-      "impactStart": "2026-03-02",
-      "impactEnd": "2026-03-09",
-      "fixedDate": "2026-03-09",
-      "fixedBy": "Madelaine Davis"
-    },
-    {
-      "id": "WF-004",
-      "title": "LO name not updating in automated emails after loan officer change",
-      "desc": "When a loan officer was changed on a deal, automated emails continued to display the previous LO's name rather than the updated one. This affected agent-facing emails and potentially client communications. The issue was resolved by Luis and was determined to be a product-level fix.",
-      "workaround": "Manually resend any agent or client emails that went out with the incorrect LO name during the impact window.",
+      "title": "Loan officer update not reflected in automated agent emails",
+      "desc": "When a loan officer was changed on a deal, automated emails to the agent continued to display the previous loan officer's information instead of the updated one. The fix was handled by Luis on the product side. Root cause was not explicitly stated.",
+      "workaround": "Manually verify that agent-facing emails reflect the correct loan officer for any deals where an LO change occurred around the impact window.",
       "tag": "emails",
       "impactStart": "2026-03-13",
       "impactEnd": "2026-03-13",
@@ -46,10 +24,43 @@
       "fixedBy": "Luis"
     },
     {
+      "id": "WF-003",
+      "title": "Offer Accepted workflow not re-triggering after deal stage reverted and reset",
+      "desc": "When a deal was moved from Offer Accepted back to a prior stage and then updated to Offer Accepted again, the TC workflow tasks did not re-trigger. The root cause was that 'deal stage = Offer Accepted' was not listed as a re-enrollment criterion in the workflow. Madelaine updated the workflow to include it as a re-enrollment trigger.",
+      "workaround": "Manually enroll any deals that were flipped back to Offer Accepted during the impact window and did not receive TC tasks.",
+      "tag": "tasks",
+      "impactStart": "2026-03-16",
+      "impactEnd": "2026-03-16",
+      "fixedDate": "2026-03-16",
+      "fixedBy": "Madelaine Davis"
+    },
+    {
+      "id": "WF-004",
+      "title": "Post-referral workflow tasks not stopping when deal marked Closed Lost or Transferred",
+      "desc": "HAs continued to receive post-referral workflow check-in tasks for deals that had been marked as Closed Lost or Transferred. Madelaine made a tweak to the workflow filters to prevent tasks from firing on these statuses. The fix was confirmed on March 9, 2026.",
+      "workaround": "Manually dismiss any check-in tasks that were incorrectly generated for Closed Lost or Transferred deals during the impact window.",
+      "tag": "tasks",
+      "impactStart": "2026-02-26",
+      "impactEnd": "2026-03-09",
+      "fixedDate": "2026-03-09",
+      "fixedBy": "Madelaine Davis"
+    },
+    {
       "id": "WF-005",
-      "title": "Post-referral workflow not triggering tasks for referral accepted on March 18th",
-      "desc": "A referral accepted on March 18th did not generate any post-referral workflow tasks for the HA. The root cause was identified as an error in how data was being pulled, preventing the workflow from filtering correctly. The issue was escalated to product for resolution.",
-      "workaround": "Manually enroll any deals referred around March 18th that did not receive post-referral tasks and follow up manually on any missed touchpoints.",
+      "title": "MRC deals updated to Offer Accepted not enrolling TCs into workflow tasks",
+      "desc": "MRC deals marked as Offer Accepted were not triggering the TC workflow, leaving TCs without tasks to manage the transaction. Madelaine spoke with HubSpot support and confirmed the issue was resolved. Root cause was not explicitly disclosed.",
+      "workaround": "Manually enroll any MRC deals marked Offer Accepted between approximately March 14 and April 1 that did not receive TC workflow tasks.",
+      "tag": "tasks",
+      "impactStart": "2026-03-14",
+      "impactEnd": "2026-04-01",
+      "fixedDate": "2026-04-01",
+      "fixedBy": "Madelaine Davis"
+    },
+    {
+      "id": "WF-006",
+      "title": "Post-referral workflow not generating tasks after referral accepted on March 18",
+      "desc": "A deal accepted as a referral on March 18, 2026 did not generate any post-referral workflow tasks. The root cause was identified as a data-pulling error that prevented the workflow from filtering correctly. The issue was escalated to the product team.",
+      "workaround": "Manually review and complete any post-referral tasks for deals accepted around March 18 that did not receive automated task generation.",
       "tag": "tasks",
       "impactStart": "2026-03-18",
       "impactEnd": "2026-04-30",
@@ -57,10 +68,10 @@
       "fixedBy": "Madelaine Davis"
     },
     {
-      "id": "WF-006",
-      "title": "Buyer credit SMS sent in Offer Accepted stage without credit amount populated",
-      "desc": "An SMS notifying buyers of their buyer credit amount was firing in the Offer Accepted stage before closing information had been submitted, resulting in a message with a blank credit amount. The SMS should only trigger in the Sale Pending stage once the credit amount is calculable. The issue was confirmed as a dash-triggered communication and escalated to product.",
-      "workaround": "Manually send the correct buyer credit SMS with the accurate dollar amount to any buyers who received the blank credit SMS during the impact window.",
+      "id": "WF-007",
+      "title": "Buyer credit SMS sent at Offer Accepted stage before closing info available",
+      "desc": "An SMS notifying buyers of their credit amount was being sent at the Offer Accepted stage, before closing information had been submitted and the credit amount could be calculated. The SMS should only send at the Sale Pending stage with the actual dollar amount included. The issue was confirmed to be a Dash-triggered communication and was escalated to the product team.",
+      "workaround": "Manually send the correct buyer credit SMS with the actual dollar amount to any buyers who received the premature message during the Offer Accepted stage.",
       "tag": "sms",
       "impactStart": "2026-04-20",
       "impactEnd": "2026-04-30",
