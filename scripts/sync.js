@@ -2,6 +2,10 @@
  * sync.js
  * Reads #workflow_troubleshoot, passes messages to Claude,
  * extracts confirmed-fixed issues, and writes issues.json.
+ *
+ * MERGE STRATEGY: existing issues.json is the source of truth.
+ * Claude can only ADD new issue IDs — it can never delete existing ones.
+ * This prevents non-deterministic Claude runs from dropping entries.
  */
 
 const { WebClient } = require('@slack/web-api');
@@ -128,34 +132,89 @@ Important rules:
     throw new Error(`Claude API error ${resp.status}: ${err}`);
   }
 
-  const data  = await resp.json();
-  const text  = data.content?.[0]?.text?.trim() || '[]';
-  const clean = text.replace(/^```json?\s*/i, '').replace(/\s*```$/, '').trim();
+  const data = await resp.json();
+  const text = data.content?.[0]?.text?.trim() || '[]';
+
+  // Robust extraction: find the JSON array anywhere in the response,
+  // even if Claude prefixes it with reasoning text.
+  const match = text.match(/\[[\s\S]*\]/);
+  if (!match) {
+    console.error('Failed to find JSON array in Claude response:', text);
+    throw new Error('Claude did not return a JSON array');
+  }
 
   try {
-    return JSON.parse(clean);
+    return JSON.parse(match[0]);
   } catch (e) {
-    console.error('Failed to parse Claude response:', clean);
+    console.error('Failed to parse Claude response:', match[0]);
     throw new Error('Claude did not return valid JSON');
   }
 }
 
 // ─────────────────────────────────────────────
-//  4. Main
+//  4. Load existing issues.json (if it exists)
+// ─────────────────────────────────────────────
+function loadExistingIssues() {
+  try {
+    const raw = fs.readFileSync('issues.json', 'utf8');
+    const parsed = JSON.parse(raw);
+    return parsed.issues || [];
+  } catch (e) {
+    // File doesn't exist yet or is malformed — start fresh
+    return [];
+  }
+}
+
+// ─────────────────────────────────────────────
+//  5. Merge: existing issues are never deleted.
+//     Claude can only add new IDs.
+// ─────────────────────────────────────────────
+function mergeIssues(existing, fromClaude) {
+  const merged = new Map(existing.map(i => [i.id, i]));
+
+  let added = 0;
+  for (const issue of fromClaude) {
+    if (!merged.has(issue.id)) {
+      merged.set(issue.id, issue);
+      added++;
+    }
+    // If the ID already exists, keep the existing entry.
+    // This prevents Claude's non-determinism from overwriting
+    // manually-curated or previously-correct entries.
+  }
+
+  if (added > 0) {
+    console.log(`  Added ${added} new issue(s) from this sync.`);
+  } else {
+    console.log('  No new issues found — existing entries preserved.');
+  }
+
+  // Sort by ID so the file is stable and readable
+  return Array.from(merged.values()).sort((a, b) => a.id.localeCompare(b.id));
+}
+
+// ─────────────────────────────────────────────
+//  6. Main
 // ─────────────────────────────────────────────
 async function main() {
   if (!SLACK_TOKEN)   throw new Error('SLACK_BOT_TOKEN is not set');
   if (!ANTHROPIC_KEY) throw new Error('ANTHROPIC_API_KEY is not set');
 
+  const existing     = loadExistingIssues();
+  console.log(`  Loaded ${existing.length} existing issue(s) from issues.json.`);
+
   const threads      = await fetchMessages();
   const slackContent = formatForClaude(threads);
-  const issues       = await extractIssues(slackContent);
+  const fromClaude   = await extractIssues(slackContent);
 
-  console.log(`  Extracted ${issues.length} confirmed-fixed issue(s).`);
+  console.log(`  Claude extracted ${fromClaude.length} confirmed-fixed issue(s).`);
+
+  const merged = mergeIssues(existing, fromClaude);
+  console.log(`  Total after merge: ${merged.length} issue(s).`);
 
   const output = {
     lastUpdated: new Date().toISOString(),
-    issues,
+    issues: merged,
   };
 
   fs.writeFileSync('issues.json', JSON.stringify(output, null, 2));
