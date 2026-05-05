@@ -544,6 +544,68 @@
   .footer a { color: var(--blue); text-decoration: none; font-weight: 500; }
   .footer a:hover { text-decoration: underline; }
 
+  /* ── KEYWORD CHIPS ───────────────────────── */
+  .keyword-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+    margin-top: 10px;
+  }
+  .kchip {
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--text-muted);
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    border-radius: 5px;
+    padding: 2px 8px;
+    cursor: pointer;
+    transition: all .12s;
+    user-select: none;
+  }
+  .kchip:hover {
+    background: var(--blue-light);
+    border-color: var(--blue-tag-border);
+    color: var(--blue);
+  }
+  .kchip.active {
+    background: var(--blue);
+    border-color: var(--blue);
+    color: #fff;
+  }
+
+  /* ── SEARCH SUGGESTIONS ───────────────────── */
+  .search-wrap { position: relative; }
+  .suggestions {
+    position: absolute;
+    top: calc(100% + 4px);
+    left: 0;
+    right: 0;
+    background: var(--surface);
+    border: 1.5px solid var(--border-strong);
+    border-radius: 8px;
+    box-shadow: var(--shadow);
+    z-index: 100;
+    overflow: hidden;
+    display: none;
+  }
+  .suggestions.visible { display: block; }
+  .suggestion-item {
+    padding: 8px 14px;
+    font-size: 13px;
+    color: var(--text-muted);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    transition: background .1s;
+  }
+  .suggestion-item:hover, .suggestion-item.focused {
+    background: var(--blue-light);
+    color: var(--blue);
+  }
+  .suggestion-item svg { flex-shrink: 0; opacity: .5; }
+
   /* ── RESPONSIVE ───────────────────────────── */
   @media (max-width: 640px) {
     .header { padding: 0 20px; flex-direction: column; }
@@ -615,6 +677,7 @@
       </svg>
     </span>
     <input type="text" id="search" placeholder="Search issues…" autocomplete="off" />
+    <div class="suggestions" id="suggestions"></div>
   </div>
   <div class="filter-group" id="filters">
     <button class="filter-btn active" data-tag="all">All</button>
@@ -644,8 +707,173 @@
 
 <script>
 let ALL_ISSUES = [];
-let activeTag = 'all', searchVal = '', checkDateVal = '';
+let KEYWORD_INDEX = new Map(); // keyword → Set of issue IDs
+let activeTag = 'all', searchVal = '', checkDateVal = '', activeChip = '';
 
+// ── STOP WORDS ─────────────────────────────────────────────────────────────
+const STOP = new Set([
+  'a','an','the','and','or','but','in','on','at','to','for','of','with','by',
+  'from','as','is','was','are','were','be','been','being','have','has','had',
+  'do','does','did','will','would','could','should','may','might','can','not',
+  'it','its','this','that','these','those','i','we','you','he','she','they',
+  'me','us','him','her','them','my','our','your','his','their','what','which',
+  'who','when','where','why','how','all','each','every','both','few','more',
+  'most','other','some','such','no','only','same','so','than','too','very',
+  'just','also','there','then','into','any','if','because','since','while',
+  'after','before','during','about','above','below','between','through',
+  'including','within','without','even','still','yet','back','well','new',
+  'per','now','here','the','deal','deals','lead','leads','issue','issues',
+  'workflow','workflows','affect','affected','affecting','causing','cause',
+  'cause','caused','fix','fixed','fixing','resolve','resolved','resolving',
+  'update','updated','updating','confirm','confirmed','apply','applied',
+  'during','impact','window','correctly','correctly','correctly','their',
+  'were','would','been','from','that','this','when','with','have'
+]);
+
+// ── DOMAIN DICTIONARY ──────────────────────────────────────────────────────
+// Each entry: { pattern, label, searchAliases }
+// Aliases let search queries like "transaction coordinator" match "TC" issues
+const DOMAIN = [
+  { p: /\bLoan\s*Simple\b/gi,                    label: 'Loan Simple',     aliases: ['ls','loan simple'] },
+  { p: /\bLS\s+leads?\b/g,                       label: 'Loan Simple',     aliases: ['ls','loan simple'] },
+  { p: /\bMRC\b/g,                               label: 'MRC',             aliases: ['mrc'] },
+  { p: /\bTurboHome\b/gi,                        label: 'TurboHome',       aliases: ['turbohome'] },
+  { p: /\bEngineering\b/g,                       label: 'Engineering',     aliases: ['engineering'] },
+  { p: /\b(TC|transaction\s*coordinator)s?\b/gi, label: 'TC',              aliases: ['tc','transaction coordinator'] },
+  { p: /\b(HA|home\s*advisor)s?\b/gi,            label: 'Home Advisor',    aliases: ['ha','home advisor'] },
+  { p: /\b(LO|loan\s*officer)s?\b/gi,            label: 'Loan Officer',    aliases: ['lo','loan officer'] },
+  { p: /\bHubSpot\b/gi,                          label: 'HubSpot',         aliases: ['hubspot'] },
+  { p: /\bDash\b/g,                              label: 'Dash',            aliases: ['dash'] },
+  { p: /\bTwilio\b/gi,                           label: 'Twilio',          aliases: ['twilio'] },
+  { p: /\bOffer\s*Accepted\b/gi,                 label: 'Offer Accepted',  aliases: ['offer accepted','oa'] },
+  { p: /\bSale\s*Pending\b/gi,                   label: 'Sale Pending',    aliases: ['sale pending','sp'] },
+  { p: /\bClosed\s*Lost\b/gi,                    label: 'Closed Lost',     aliases: ['closed lost'] },
+  { p: /\bTransferred\b/gi,                      label: 'Transferred',     aliases: ['transferred'] },
+  { p: /\bre-?enroll(ment|ing|ed)?\b/gi,         label: 're-enrollment',   aliases: ['re-enrollment','reenrollment','re-enroll'] },
+  { p: /\benroll(ment|ing|ed)?\b/gi,             label: 'enrollment',      aliases: ['enrollment','enroll'] },
+  { p: /\bduplicate\s*(tasks?)?\b/gi,            label: 'duplicate tasks', aliases: ['duplicate','duplicates'] },
+  { p: /\bcredit\s*(amount)?\b/gi,               label: 'credit amount',   aliases: ['credit','credit amount'] },
+  { p: /\bclosing\s*(info|information)?\b/gi,    label: 'closing info',    aliases: ['closing','closing info'] },
+  { p: /\bpost-?referral\b/gi,                   label: 'post-referral',   aliases: ['post-referral','post referral'] },
+  { p: /\breferral\b/gi,                         label: 'referral',        aliases: ['referral'] },
+  { p: /\bSMS\b/g,                               label: 'SMS',             aliases: ['sms','text'] },
+  { p: /\bcredit\s*SMS\b/gi,                     label: 'buyer credit SMS',aliases: ['buyer credit sms'] },
+  { p: /\bdata\s*(pull|sync)\b/gi,               label: 'data sync',       aliases: ['data pull','data sync'] },
+];
+
+// ── KEYWORD EXTRACTION ─────────────────────────────────────────────────────
+function extractKeywords(issue) {
+  const text = `${issue.title} ${issue.desc} ${issue.workaround || ''}`;
+  const found = new Map(); // label → true (ordered)
+
+  // Domain terms first
+  for (const d of DOMAIN) {
+    d.p.lastIndex = 0;
+    if (d.p.test(text) && !found.has(d.label)) found.set(d.label, true);
+    d.p.lastIndex = 0;
+  }
+
+  // Remaining significant words
+  const words = text.split(/[\s,.\-–—:;()/\[\]"']+/);
+  for (const w of words) {
+    const clean = w.replace(/[^a-zA-Z0-9]/g, '');
+    if (clean.length < 4) continue;
+    const lower = clean.toLowerCase();
+    if (STOP.has(lower)) continue;
+    // Skip if already covered by a domain label
+    const covered = [...found.keys()].some(l => l.toLowerCase().includes(lower) || lower.includes(l.toLowerCase().split(' ')[0]));
+    if (covered) continue;
+    if (!found.has(clean)) found.set(clean, true);
+  }
+
+  return [...found.keys()].slice(0, 7);
+}
+
+// ── BUILD KEYWORD INDEX ────────────────────────────────────────────────────
+function buildKeywordIndex(issues) {
+  const idx = new Map();
+  for (const issue of issues) {
+    const kws = extractKeywords(issue);
+    issue._keywords = kws; // cache on issue object
+    for (const kw of kws) {
+      const key = kw.toLowerCase();
+      if (!idx.has(key)) idx.set(key, new Set());
+      idx.get(key).add(issue.id);
+      // Also index aliases from DOMAIN
+      for (const d of DOMAIN) {
+        if (d.label === kw) {
+          for (const alias of d.aliases) {
+            if (!idx.has(alias)) idx.set(alias, new Set());
+            idx.get(alias).add(issue.id);
+          }
+        }
+      }
+    }
+    // Always index the issue ID and tag
+    if (!idx.has(issue.id.toLowerCase())) idx.set(issue.id.toLowerCase(), new Set());
+    idx.get(issue.id.toLowerCase()).add(issue.id);
+    if (!idx.has(issue.tag)) idx.set(issue.tag, new Set());
+    idx.get(issue.tag).add(issue.id);
+  }
+  return idx;
+}
+
+// ── SMART SEARCH ──────────────────────────────────────────────────────────
+// Returns true if issue matches query, using keyword index + text fallback
+function issueMatchesSearch(issue, q) {
+  if (!q) return true;
+  const lower = q.toLowerCase().trim();
+
+  // Direct text match (title, desc, workaround, id)
+  const text = `${issue.title} ${issue.desc} ${issue.workaround || ''} ${issue.id}`.toLowerCase();
+  if (text.includes(lower)) return true;
+
+  // Keyword index match (exact key)
+  if (KEYWORD_INDEX.has(lower) && KEYWORD_INDEX.get(lower).has(issue.id)) return true;
+
+  // Partial keyword index match (query is prefix of a key)
+  for (const [key] of KEYWORD_INDEX) {
+    if (key.startsWith(lower) && KEYWORD_INDEX.get(key).has(issue.id)) return true;
+  }
+
+  // Stem match: try stripping common suffixes and re-matching
+  const stems = [lower.replace(/ing$/, ''), lower.replace(/ed$/, ''), lower.replace(/s$/, ''), lower.replace(/ment$/, '')];
+  for (const stem of stems) {
+    if (stem.length < 3) continue;
+    if (text.includes(stem)) return true;
+    for (const [key] of KEYWORD_INDEX) {
+      if (key.includes(stem) && KEYWORD_INDEX.get(key).has(issue.id)) return true;
+    }
+  }
+
+  return false;
+}
+
+// ── SUGGESTIONS ────────────────────────────────────────────────────────────
+function getSuggestions(q) {
+  if (!q || q.length < 2) return [];
+  const lower = q.toLowerCase();
+  const matches = new Set();
+
+  for (const [key] of KEYWORD_INDEX) {
+    if (key.startsWith(lower) || key.includes(lower)) matches.add(key);
+  }
+
+  // Also suggest domain labels
+  for (const d of DOMAIN) {
+    if (d.label.toLowerCase().includes(lower)) matches.add(d.label);
+    for (const alias of d.aliases) {
+      if (alias.includes(lower)) matches.add(d.label);
+    }
+  }
+
+  return [...matches]
+    .filter(m => m !== lower)
+    .sort((a, b) => (a.startsWith(lower) ? -1 : 1) - (b.startsWith(lower) ? -1 : 1))
+    .slice(0, 6);
+}
+
+// ── FORMAT HELPERS ─────────────────────────────────────────────────────────
 function fmtDate(d) {
   if (!d) return '—';
   const [y, m, day] = d.split('-');
@@ -660,20 +888,40 @@ function fmtDatetime(iso) {
 function parseDate(s) { const [y,m,d]=s.split('-').map(Number); return new Date(y,m-1,d); }
 function dateInRange(d,s,e) { const dt=parseDate(d),st=parseDate(s),en=parseDate(e); return dt>=st&&dt<=en; }
 
+// ── HIGHLIGHT search term in text ──────────────────────────────────────────
+function highlight(text, q) {
+  if (!q || q.length < 2) return text;
+  const escaped = q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  return text.replace(new RegExp(`(${escaped})`, 'gi'), '<mark style="background:#FEF3C7;border-radius:2px;padding:0 1px;">$1</mark>');
+}
+
+// ── BUILD CARD ─────────────────────────────────────────────────────────────
 function buildCard(issue) {
   const hl = checkDateVal && dateInRange(checkDateVal, issue.impactStart, issue.impactEnd);
   const card = document.createElement('div');
   card.className = 'issue-card' + (hl ? ' highlighted' : '');
+
+  const kws = issue._keywords || extractKeywords(issue);
+  const chipsHtml = kws.map(kw => {
+    const isActive = activeChip === kw;
+    return `<span class="kchip${isActive ? ' active' : ''}" data-kw="${kw}">${kw}</span>`;
+  }).join('');
+
+  const q = searchVal;
+  const titleHtml  = highlight(issue.title, q);
+  const descHtml   = highlight(issue.desc, q);
+  const wkHtml     = issue.workaround ? highlight(issue.workaround, q) : '';
+
   card.innerHTML = `
     <div class="issue-main">
       <div class="issue-top">
         <span class="issue-id">${issue.id}</span>
-        <span class="issue-title">${issue.title}</span>
+        <span class="issue-title">${titleHtml}</span>
         <span class="tag tag-${issue.tag}">${issue.tag}</span>
         ${hl ? `<span class="hit-badge">⚠ Your date falls in this window</span>` : ''}
       </div>
-      <div class="issue-desc">${issue.desc}</div>
-      ${issue.workaround ? `<div class="workaround"><strong>For affected leads:</strong> ${issue.workaround}</div>` : ''}
+      <div class="issue-desc">${descHtml}</div>
+      ${wkHtml ? `<div class="workaround"><strong>For affected leads:</strong> ${wkHtml}</div>` : ''}
       <div class="issue-meta">
         <div class="meta-pill">
           <span class="meta-pill-label">Impact</span>
@@ -685,22 +933,43 @@ function buildCard(issue) {
         </div>
         ${issue.fixedBy ? `<div class="meta-pill"><span class="meta-pill-label">By</span><span class="meta-pill-value">${issue.fixedBy}</span></div>` : ''}
       </div>
+      <div class="keyword-chips">${chipsHtml}</div>
     </div>
     <div class="issue-right">
       <span class="status-badge status-fixed"><span class="status-dot"></span>Fixed</span>
     </div>`;
+
+  // Chip click: set search to chip keyword
+  card.querySelectorAll('.kchip').forEach(chip => {
+    chip.addEventListener('click', () => {
+      const kw = chip.dataset.kw;
+      if (activeChip === kw) {
+        activeChip = '';
+        searchVal = '';
+        document.getElementById('search').value = '';
+      } else {
+        activeChip = kw;
+        searchVal = kw;
+        document.getElementById('search').value = kw;
+      }
+      hideSuggestions();
+      renderIssues();
+    });
+  });
+
   return card;
 }
 
+// ── RENDER ─────────────────────────────────────────────────────────────────
 function renderIssues() {
   const container = document.getElementById('issue-list');
   container.querySelectorAll('.issue-card').forEach(el => el.remove());
 
   const filtered = ALL_ISSUES.filter(i => {
-    const matchTag = activeTag === 'all' || i.tag === activeTag;
-    const q = searchVal.toLowerCase();
-    const matchSearch = !q || i.title.toLowerCase().includes(q) || i.desc.toLowerCase().includes(q) || i.id.toLowerCase().includes(q);
-    return matchTag && matchSearch;
+    const matchTag    = activeTag === 'all' || i.tag === activeTag;
+    const matchSearch = issueMatchesSearch(i, searchVal);
+    const matchChip   = !activeChip || (i._keywords || []).includes(activeChip);
+    return matchTag && matchSearch && (!activeChip || matchChip);
   });
 
   document.getElementById('list-count').textContent  = filtered.length;
@@ -711,12 +980,45 @@ function renderIssues() {
   filtered.length === 0 ? empty.classList.add('visible') : empty.classList.remove('visible');
 }
 
+// ── SUGGESTIONS UI ─────────────────────────────────────────────────────────
+function showSuggestions(q) {
+  const box = document.getElementById('suggestions');
+  const items = getSuggestions(q);
+  if (!items.length || !q) { hideSuggestions(); return; }
+
+  box.innerHTML = items.map(s => `
+    <div class="suggestion-item" data-val="${s}">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+      ${s}
+    </div>`).join('');
+
+  box.querySelectorAll('.suggestion-item').forEach(item => {
+    item.addEventListener('mousedown', e => {
+      e.preventDefault();
+      const val = item.dataset.val;
+      searchVal = val;
+      activeChip = '';
+      document.getElementById('search').value = val;
+      hideSuggestions();
+      renderIssues();
+    });
+  });
+
+  box.classList.add('visible');
+}
+
+function hideSuggestions() {
+  document.getElementById('suggestions').classList.remove('visible');
+}
+
+// ── LOAD ────────────────────────────────────────────────────────────────────
 async function loadIssues() {
   try {
     const res  = await fetch('issues.json?t=' + Date.now());
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const data = await res.json();
     ALL_ISSUES = (data.issues || []).slice().reverse();
+    KEYWORD_INDEX = buildKeywordIndex(ALL_ISSUES);
     document.getElementById('last-updated').textContent = fmtDatetime(data.lastUpdated);
     document.getElementById('loading-state').style.display = 'none';
     renderIssues();
@@ -726,7 +1028,19 @@ async function loadIssues() {
   }
 }
 
-document.getElementById('search').addEventListener('input', e => { searchVal = e.target.value; renderIssues(); });
+// ── EVENTS ──────────────────────────────────────────────────────────────────
+document.getElementById('search').addEventListener('input', e => {
+  searchVal = e.target.value;
+  activeChip = '';
+  showSuggestions(searchVal);
+  renderIssues();
+});
+document.getElementById('search').addEventListener('blur', () => {
+  setTimeout(hideSuggestions, 150);
+});
+document.getElementById('search').addEventListener('focus', e => {
+  if (e.target.value) showSuggestions(e.target.value);
+});
 
 document.getElementById('filters').addEventListener('click', e => {
   const b = e.target.closest('.filter-btn');
