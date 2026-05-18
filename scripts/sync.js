@@ -14,7 +14,7 @@ const fs = require('fs');
 const SLACK_TOKEN    = process.env.SLACK_BOT_TOKEN;
 const ANTHROPIC_KEY  = process.env.ANTHROPIC_API_KEY;
 const CHANNEL_ID     = 'C09FFH560A1';   // #workflow_troubleshoot
-const LOOKBACK_DAYS  = 180;             // How far back to scan (6 months)
+const LOOKBACK_DAYS  = 1;               // Only scan the last 24 hours — script runs once daily at noon CT
 
 // ─────────────────────────────────────────────
 //  1. Fetch messages + thread replies from Slack
@@ -204,6 +204,12 @@ async function main() {
   console.log(`  Loaded ${existing.length} existing issue(s) from issues.json.`);
 
   const threads      = await fetchMessages();
+
+  if (threads.length === 0) {
+    console.log('  No new messages in the last 24 hours. Nothing to do.');
+    return;
+  }
+
   const slackContent = formatForClaude(threads);
   const fromClaude   = await extractIssues(slackContent);
 
